@@ -1,3 +1,4 @@
+
 class SemanticAuto:
-    def select(query):
+    def select(userInput):
         return "semantic-search"
