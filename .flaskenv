@@ -1,0 +1,9 @@
+FLASK_APP=index.py
+FLASK_DEBUG=1
+dbhost=35.219.28.103
+dbport=5432
+dbengine=postgresql
+dbname=pegadaian-kbms
+dbuser=nodeuser
+dbpassword=RotiKeju98*
+jwtkey=pegadaian-semantic
