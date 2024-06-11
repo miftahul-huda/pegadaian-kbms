@@ -42,6 +42,10 @@ class ConfigurationLogic:
 
 
     def add(self, o):
+        rows = self.session.query(Configuration).filter(Configuration.isActive == 1).all()
+        if len(rows) > 0:
+            self.session.delete(rows)
+
         o.isActive = 1
         o.createdAt = datetime.now()
         self.session.add(o)
@@ -50,8 +54,8 @@ class ConfigurationLogic:
     def get(self):
         rows = self.session.query(Configuration).filter(Configuration.isActive == 1).first()
         print("rows")
-        print(rows)
-        return rows
+        print(rows.toDict())
+        return rows.toDict()
 
         
 

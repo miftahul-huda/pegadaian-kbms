@@ -41,6 +41,13 @@ class UserRoleApplicationLogic:
     def find_role_application(self, role):
         rows = self.session.query(UserRoleApplication).filter(UserRoleApplication.role.like(f"%{role}%")).all()
         return myjson(rows=rows)
+    
+    def check_app_role(self, role, app):
+        rows = self.session.query(UserRoleApplication).filter(and_(UserRoleApplication.role.like(f"%{role}%"), 
+                                                                   UserRoleApplication.app.like(f"%{app}%"))).all()
+        if(len(rows) == 0):
+            return False
+        return True
 
         
 

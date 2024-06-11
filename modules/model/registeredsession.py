@@ -44,7 +44,7 @@ class RegisteredSessionLogic:
         c = ConfigurationLogic(Init.get_engine()).get()
         quota = 10
         if(c != None):
-            quota = c.maxQuestionPerSession
+            quota = c["maxQuestionPerSession"]
         sesid = "ses" + randomstr(10)
         o = RegisteredSession(session=sesid, createdAt=datetime.datetime.now(), user=user["user"], quota=quota)
         self.session.add(o)
