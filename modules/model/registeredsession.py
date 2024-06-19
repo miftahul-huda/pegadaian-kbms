@@ -61,6 +61,21 @@ class RegisteredSessionLogic:
         return True
     
 
+    def get_session(self, user, session):
+        print("---RegisteredSessionLogic.get_session---")
+        print(user, session)
+        o = self.session.query(RegisteredSession).filter(and_(RegisteredSession.user == user, RegisteredSession.session == session)).first()
+        return o
+    
+
+    def update_session_quota(self, user, session, quota):
+        print("---RegisteredSessionLogic.update_session---")
+        print(user, session)
+        o = self.session.query(RegisteredSession).filter(and_(RegisteredSession.user == user, RegisteredSession.session == session)).first()
+        o.quota = quota
+        self.session.commit()
+    
+
 
         
 

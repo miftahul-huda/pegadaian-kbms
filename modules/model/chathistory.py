@@ -4,11 +4,22 @@ from sqlalchemy.orm import sessionmaker
 from dataclasses import dataclass
 from flask import Flask, jsonify
 from sqlalchemy import inspect
-from ..libs.utils import serialize_datetime, myjson
+from ..libs.utils import serialize_datetime, myjson, randomstr
 import json
+
+import google.generativeai as genai
+from google.api_core import retry
+import os
+
+from .registeredsession import RegisteredSession, RegisteredSessionLogic
+from .db import Init
+
+from .errors import QuotaRanOutError, NoSessionExistError
+from datetime import datetime
 
 
 Base = declarative_base()
+
 
     
 class ChatHistory(Base):
@@ -77,6 +88,61 @@ class ChatHistoryLogic:
                   ChatHistory.question_query_type.like(f"semantic-query")
                 )).all()
         return myjson(rows=rows)
-        
+    
+    def check_session(user, session):
+        registeredSessionLogic =  RegisteredSessionLogic(Init.get_engine())
+        checkSession = registeredSessionLogic.check_session(user=user, session=session)
+        return checkSession
+
+
+    def chat_search(self, user, session, query):
+
+        registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
+        chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+        if(chat_session is None):
+            raise NoSessionExistError("No session exists : " + session) 
+        elif (chat_session.quota <= 0):
+            raise QuotaRanOutError("Quota ran out for session " + session)
+        else:
+            genai.configure(api_key=os.environ.get("gemini-api-key"))
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(query)
+
+            quota = chat_session.quota - 1
+            registeredSessionLogic.update_session_quota(user["user"], session, quota)
+            chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+            chatID = "chat-" + randomstr(10)
+            now = datetime.now()
+            formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+
+            return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-search'  }
+
+
+    def chat_query(self, user, session, query):
+
+        registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
+        chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+        if(chat_session is None):
+            raise NoSessionExistError("No session exists : " + session) 
+        elif (chat_session.quota <= 0):
+            raise QuotaRanOutError("Quota ran out for session " + session)
+        else:
+            genai.configure(api_key=os.environ.get("gemini-api-key"))
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(query, generation_config=genai.GenerationConfig(response_mime_type="application/json"))
+
+            quota = chat_session.quota - 1
+            registeredSessionLogic.update_session_quota(user["user"], session, quota)
+            chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+            chatID = "chat-" + randomstr(10)
+            now = datetime.now()
+            formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+
+            return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-query'  }
+
 
     

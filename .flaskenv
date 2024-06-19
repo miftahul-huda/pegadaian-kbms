@@ -7,3 +7,4 @@ dbname=pegadaian-kbms
 dbuser=nodeuser
 dbpassword=RotiKeju98*
 jwtkey=pegadaian-semantic
+gemini-api-key=AIzaSyCCFn9D7WZepq2LTjaypZMOlh_tlYXVSdA
