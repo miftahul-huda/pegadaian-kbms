@@ -6,7 +6,9 @@ from flask_cors import CORS
 from modules.routes.appaccess import AppAccess
 from modules.routes.appaccesscheck import AppAccessCheck
 from modules.routes.searchhistory import SearchHistory
-from modules.routes.queryHistory import QueryHistory
+from modules.routes.queryhistory import QueryHistory
+from modules.routes.autohistory import AutoHistory
+
 from modules.routes.documentRole import DocumentRole
 from modules.routes.tableRole import TableRole
 from modules.routes.registeredsession import RegisteredSession
@@ -59,6 +61,8 @@ api.add_resource(AppAccessCheck, f"{prefix}/app-access/check")
 
 api.add_resource(SearchHistory, f"{prefix}/semantic-search")
 api.add_resource(QueryHistory, f"{prefix}/semantic-query")
+api.add_resource(AutoHistory, f"{prefix}/semantic-auto")
+
 api.add_resource(DocumentRole, f"{prefix}/document-role")
 api.add_resource(TableRole, f"{prefix}/table-role")
 api.add_resource(Util, f"{prefix}/util")

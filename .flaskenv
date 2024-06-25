@@ -8,3 +8,6 @@ dbuser=nodeuser
 dbpassword=RotiKeju98*
 jwtkey=pegadaian-semantic
 gemini-api-key=AIzaSyCCFn9D7WZepq2LTjaypZMOlh_tlYXVSdA
+semantic-search-url=https://semantic-search-service-w4uuat2n2a-et.a.run.app/query
+semantic-query-url=https://semantic-q-service-w4uuat2n2a-et.a.run.app/query
+semantic-auto-url=https://ai-decision-service-w4uuat2n2a-et.a.run.app/query

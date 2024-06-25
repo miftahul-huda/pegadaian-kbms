@@ -6,6 +6,8 @@ from flask import Flask, jsonify
 from sqlalchemy import inspect
 from ..libs.utils import serialize_datetime, myjson, randomstr
 import json
+import requests
+from requests.auth import HTTPBasicAuth
 
 import google.generativeai as genai
 from google.api_core import retry
@@ -53,6 +55,16 @@ class ChatHistoryLogic:
         self.session.add(o)
         self.session.commit()
 
+    def find_auto_history(self, user):
+        rows = self.session.query( ChatHistory.session).filter(
+            and_( ChatHistory.userID.like(f"%{user}%"), 
+                  ChatHistory.question_query_type.like(f"semantic-auto")
+                )).distinct().all()
+        arr = []
+        for c in rows:
+            arr.append( { 'session': c.session } )
+        return arr
+
     def find_search_history(self, user):
         rows = self.session.query( ChatHistory.session).filter(
             and_( ChatHistory.userID.like(f"%{user}%"), 
@@ -96,43 +108,61 @@ class ChatHistoryLogic:
 
 
     def chat_search(self, user, session, query):
+        print("USER")
+        print(user)
 
         registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
         chat_session = registeredSessionLogic.get_session(user["user"], session)
 
         if(chat_session is None):
-            raise NoSessionExistError("No session exists : " + session) 
+            raise NoSessionExistError("No session '" + session + "' exists for user " + user["user"]) 
         elif (chat_session.quota <= 0):
             raise QuotaRanOutError("Quota ran out for session " + session)
         else:
-            genai.configure(api_key=os.environ.get("gemini-api-key"))
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(query)
-
+            chatID = "chat-" + randomstr(10)
             quota = chat_session.quota - 1
             registeredSessionLogic.update_session_quota(user["user"], session, quota)
             chat_session = registeredSessionLogic.get_session(user["user"], session)
 
-            chatID = "chat-" + randomstr(10)
+            
+            
             now = datetime.now()
             formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
 
+            url = os.environ.get("semantic-search-url")
+            headers = {
+                "accept" : "application/json",
+                "user-id" : user["user"],
+                "session-id" : session,
+                "role-id" : user["role"],
+                "Content-Type" : "application/json"
+             }
+            
+            data = {
+                "prompt" : query,
+                "user_id" : user["user"],
+                "history" : [
+                    ["", ""]
+                ]
+            }
+
+            response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
+            print(response)
             return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-search'  }
 
 
     def chat_query(self, user, session, query):
-
+        print("USER")
+        print(user)        
+        
         registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
         chat_session = registeredSessionLogic.get_session(user["user"], session)
 
         if(chat_session is None):
-            raise NoSessionExistError("No session exists : " + session) 
+            raise NoSessionExistError("No session '" + session + "' exists for user " + user["user"]) 
         elif (chat_session.quota <= 0):
             raise QuotaRanOutError("Quota ran out for session " + session)
         else:
-            genai.configure(api_key=os.environ.get("gemini-api-key"))
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(query, generation_config=genai.GenerationConfig(response_mime_type="application/json"))
 
             quota = chat_session.quota - 1
             registeredSessionLogic.update_session_quota(user["user"], session, quota)
@@ -142,7 +172,69 @@ class ChatHistoryLogic:
             now = datetime.now()
             formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
 
+            url = os.environ.get("semantic-query-url")
+            headers = {
+                "accept" : "application/json",
+                "user-id" : user["user"],
+                "session-id" : session,
+                "role-id" : user["role"],
+                "Content-Type" : "application/json"
+             }
+            
+            data = {
+                "prompt" : query,
+                "user_id" : user["user"],
+                "history" : [
+                    ["", ""]
+                ]
+            }
+
+            response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
+            print(response)
             return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-query'  }
 
 
-    
+    def chat_auto(self, user, session, query):
+        print("USER")
+        print(user)        
+        
+        registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
+        chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+        if(chat_session is None):
+            raise NoSessionExistError("No session '" + session + "' exists for user " + user["user"]) 
+        elif (chat_session.quota <= 0):
+            raise QuotaRanOutError("Quota ran out for session " + session)
+        else:
+
+            quota = chat_session.quota - 1
+            registeredSessionLogic.update_session_quota(user["user"], session, quota)
+            chat_session = registeredSessionLogic.get_session(user["user"], session)
+
+            chatID = "chat-" + randomstr(10)
+            now = datetime.now()
+            formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+
+            url = os.environ.get("semantic-auto-url")
+            headers = {
+                "accept" : "application/json",
+                "user-id" : user["user"],
+                "session-id" : session,
+                "role-id" : user["role"],
+                "Content-Type" : "application/json"
+             }
+            
+            data = {
+                "prompt" : query,
+                "user_id" : user["user"],
+                "history" : [
+                    ["", ""]
+                ]
+            }
+
+            response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
+            print(response)
+            return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-auto'  }
+
+
+    #def save_chat_history(self, user, session, chatID, query, response, time):
