@@ -88,7 +88,7 @@ class ChatHistoryLogic:
     
     def find_search_history_by_session(self, session):
         rows = self.session.query(ChatHistory).filter(
-            and_( ChatHistory.userID.like(f"%{session}%"), 
+            and_( ChatHistory.session.like(f"%{session}%"), 
                   ChatHistory.question_query_type.like(f"semantic-search")
                 )).all()
         return myjson(rows=rows)
@@ -96,9 +96,13 @@ class ChatHistoryLogic:
 
     def find_query_history_by_session(self, session):
         rows = self.session.query(ChatHistory).filter(
-            and_( ChatHistory.userID.like(f"%{session}%"), 
+            and_( ChatHistory.session.like(f"%{session}%"), 
                   ChatHistory.question_query_type.like(f"semantic-query")
                 )).all()
+        return myjson(rows=rows)
+    
+    def find_all_history_by_session(self, session):
+        rows = self.session.query(ChatHistory).filter(ChatHistory.session.like(f"%{session}%")).all()
         return myjson(rows=rows)
     
     def check_session(user, session):
@@ -107,9 +111,11 @@ class ChatHistoryLogic:
         return checkSession
 
 
-    def chat_search(self, user, session, query):
-        print("USER")
-        print(user)
+    def chat_search(self, user, session, query, history):
+        print("QUERY")
+        print(query)
+        print("HISTORY")
+        print(history)
 
         registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
         chat_session = registeredSessionLogic.get_session(user["user"], session)
@@ -121,39 +127,40 @@ class ChatHistoryLogic:
         else:
             chatID = "chat-" + randomstr(10)
             quota = chat_session.quota - 1
-            registeredSessionLogic.update_session_quota(user["user"], session, quota)
-            chat_session = registeredSessionLogic.get_session(user["user"], session)
 
-            
-            
-            now = datetime.now()
-            formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            # If quota is not -1
+            if (quota >= 0):
+                registeredSessionLogic.update_session_quota(user["user"], session, quota)
+                chat_session = registeredSessionLogic.get_session(user["user"], session)
 
-            url = os.environ.get("semantic-search-url")
-            headers = {
-                "accept" : "application/json",
-                "user-id" : user["user"],
-                "session-id" : session,
-                "role-id" : user["role"],
-                "Content-Type" : "application/json"
-             }
-            
-            data = {
-                "prompt" : query,
-                "user_id" : user["user"],
-                "history" : [
-                    ["", ""]
-                ]
-            }
+                now = datetime.now()
+                formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
 
-            response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
-            print(response)
-            return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-search'  }
+                url = os.environ.get("semantic-search-url")
+                headers = {
+                    "accept" : "application/json",
+                    "user-id" : user["user"],
+                    "session-id" : session,
+                    "role-id" : user["role"],
+                    "Content-Type" : "application/json"
+                }
+                
+                data = {
+                    "prompt" : query,
+                    "user_id" : user["user"],
+                    "history" : history
+                }
+
+                response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
+                print(response)
+                return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-search'  }
 
 
-    def chat_query(self, user, session, query):
-        print("USER")
-        print(user)        
+    def chat_query(self, user, session, query, history):
+        print("QUERY")
+        print(query)
+        print("HISTORY")
+        print(history)     
         
         registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
         chat_session = registeredSessionLogic.get_session(user["user"], session)
@@ -184,9 +191,7 @@ class ChatHistoryLogic:
             data = {
                 "prompt" : query,
                 "user_id" : user["user"],
-                "history" : [
-                    ["", ""]
-                ]
+                "history" : history
             }
 
             response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))
@@ -194,9 +199,12 @@ class ChatHistoryLogic:
             return { 'quota' : chat_session.quota, 'response' : response.text, 'session' : session, 'chatID' : chatID, 'date' : formatted_datetime, 'type' : 'semantic-query'  }
 
 
-    def chat_auto(self, user, session, query):
+    def chat_auto(self, user, session, query, history):
         print("USER")
-        print(user)        
+        print(user)      
+
+        print("History")
+        print(history)  
         
         registeredSessionLogic = RegisteredSessionLogic(Init.get_engine())
         chat_session = registeredSessionLogic.get_session(user["user"], session)
@@ -227,9 +235,7 @@ class ChatHistoryLogic:
             data = {
                 "prompt" : query,
                 "user_id" : user["user"],
-                "history" : [
-                    ["", ""]
-                ]
+                "history" : history
             }
 
             response = requests.post(url, headers=headers, json=data, auth=HTTPBasicAuth("vertex", "BigData123!"))

@@ -17,10 +17,12 @@ class QueryHistory(Resource):
         user = g.user
         data = request.get_json()
         query = data["query"]
+        history = data["history"]
+
         chatHistoryLogic = ChatHistoryLogic(Init.get_engine())
 
         try:
-            response = chatHistoryLogic.chat_query(user, session, query)
+            response = chatHistoryLogic.chat_query(user, session, query, history)
             apiresponse = { 'status' : 'Ok', 'data' : response }
         except NoSessionExistError as e1:
             print(e1)
